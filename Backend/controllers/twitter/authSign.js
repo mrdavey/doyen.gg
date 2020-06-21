@@ -5,12 +5,12 @@ const crypto = require('crypto')
  * @note Docs: https://developer.twitter.com/en/docs/basics/authentication/oauth-1-0a/creating-a-signature
  * @param { String } method The http method, usually POST.
  * @param { String } url The Twitter URL endpoint.
- * @param { String } body The body of the request with relevant params.
+ * @param { String } extraParams Optional. Any extra params that need to be encoded.
  * @param { String } oAuthToken Optional. The OAuthToken given to us when user authenticates via Twitter.
  * @param { String } oAuthTokenSecret Optional. The OAuthTokenSecret once OAuth permission is granted.
  * @returns { { String, String }} Returns the encoded oAuthHeader and oAuthSignature.
  */
-function twitterSignHmac ({ method, url, body, oAuthToken, oAuthTokenSecret }) {
+function twitterSignHmac ({ method, url, extraParams, oAuthToken, oAuthTokenSecret }) {
   const oAuthConsumerKey = process.env.TWITTER_KEY
   const oAuthNonce = (Date.now() * Math.random()).toFixed()
   const oAuthSigMethod = 'HMAC-SHA1'
@@ -18,7 +18,7 @@ function twitterSignHmac ({ method, url, body, oAuthToken, oAuthTokenSecret }) {
   const oAuthVersion = '1.0'
 
   const params = {
-    ...body,
+    ...extraParams,
     oauth_consumer_key: oAuthConsumerKey,
     oauth_nonce: oAuthNonce,
     oauth_signature_method: oAuthSigMethod,

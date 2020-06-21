@@ -1,138 +1,41 @@
-const { makeRequest } = require('./fetch')
-const { twitterSignHmac } = require('./auth')
-const { log, error } = require('./log')
-
-const key = process.env.TWITTER_KEY
-const secret = process.env.TWITTER_SECRET
-let bearerToken
-
-//
-// Internal
-//
+const { makeTwitterCall, getRequestToken, getRedirectUrl, getAccessToken } = require('./network')
+const { twitterSignHmac } = require('./authSign')
+const { log, error } = require('../log')
 
 /**
- * Get the bearer token used for Twitter API calls for 'App' rate limiting
+ * Gets the request token and returns the redirect URL for OAuth v.1.0 authentication.
+ * @note Part of the OAuth v.1.0 workflow.
+ * @returns { String } The URL of the authentication page.
  */
-async function adminGetBearerToken () {
-  log('Getting latest Twitter Bearer token')
-  const headers = {
-    Authorization: `Basic ${Buffer.from(key + ':' + secret).toString('base64')}`,
-    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-  }
-
-  const result = await makeRequest({
-    url: 'https://api.twitter.com/oauth2/token',
-    method: 'POST',
-    body: 'grant_type=client_credentials',
-    headers: headers
-  })
-
-  // Token is only scoped to this file
-  bearerToken = result.access_token
-  log(`Bearer token received: ${bearerToken.slice(0, 3)}...${bearerToken.slice(bearerToken.length - 8, bearerToken.length - 1)}`)
+async function getRequestTokenAndGetRedirectUrl () {
+  const result = await getRequestToken()
+  log(`Request token: ${result.token}`)
+  return getRedirectUrl(result.token)
 }
 
 /**
- * Makes an authenticated Twitter call
- * @param { String } url The full twitter endpoint URL.
- * @param { String } body The body to be included in the request.
- * @param { String } method The HTTP method, e.g. POST.
- * @param { String } oAuthHeader Optional. Used when accessing a user endpoint, e.g. direct messaging.
- * @param { Boolean } isTextResponse Optional. Whether the API response is expected as text or JSON. Default JSON.
- */
-async function makeTwitterCall ({ url, body, method, oAuthHeader, isTextResponse }) {
-  if (!oAuthHeader && !bearerToken) {
-    await adminGetBearerToken()
-  }
-
-  const headers = {
-    Authorization: oAuthHeader || `Bearer ${bearerToken}`
-  }
-
-  return await makeRequest({ url, body, headers, method, isTextResponse })
-}
-
-//
-// Exports
-//
-
-// Authentication
-
-/**
- * OAuth v.1.0: Step 1 of 'Log in with Twitter'.
- * Docs: https://developer.twitter.com/en/docs/basics/authentication/api-reference/request_token
- * @note Receives the OAuth request token and secret for authenticating the user.
- */
-async function getRequestToken () {
-  const callback = encodeURI('http://localhost:3001/callback')
-  const endpoint = 'https://api.twitter.com/oauth/request_token'
-  const body = { oauth_callback: callback }
-
-  const { oAuthHeader } = twitterSignHmac({
-    method: 'POST',
-    url: endpoint,
-    body
-  })
-
-  const result = await makeTwitterCall({
-    method: 'POST',
-    url: endpoint,
-    oAuthHeader,
-    isTextResponse: true
-  })
-
-  if (result.oauth_callback_confirmed !== 'true') {
-    error('OAuth callback not confirmed!')
-  } else {
-    return {
-      token: result.oauth_token,
-      secret: result.oauth_token_secret
-    }
-  }
-}
-
-/**
- * OAuth v.1.0: Step 2
- * Docs: https://developer.twitter.com/en/docs/basics/authentication/api-reference/authenticate
- * @note Redirects the user to the Twitter login page to approve permissions.
- * @note Front end should issue an HTTP 302 redirect as the response to the original “sign in” request.
- * @param { String } oAuthToken The token returned from `requestToken()` call
- */
-function redirect (oAuthToken) {
-  return `https://api.twitter.com/oauth/authenticate?oauth_token=${oAuthToken}`
-}
-
-/**
- * OAuth v.1.0: Step 2.5
+ * Called by Twitter API when user authorizes Doyen.gg
+ * @note Part of the OAuth v.1.0 workflow.
  * @param { { oauth_token: String, oauth_verifier: String } } params The request query params received by Twitter's server
+ * @returns { {} } Access token, secret, and basic user info of the authenticated user.
  */
 async function redirectCallback (params) {
   const oAuthToken = params.oauth_token
   const oAuthVerifier = params.oauth_verifier
 
-  // TODO: - compare oAuthToken with original
+  // TODO: - compare oAuthToken with original token
+  log(`OAuthToken: ${oAuthToken}`)
 
   // Exchange OAuth request token with OAuth access token and secret
   return await getAccessToken(oAuthToken, oAuthVerifier)
 }
 
 /**
- * OAuth v.1.0: Step 3
- * Docs: https://developer.twitter.com/en/docs/basics/authentication/api-reference/access_token
- * @param { String } oAuthToken The oAuth request token.
- * @param { String } oAuthVerifier The oAuth request auth verifier token.
- * @returns { { oauth_token: String, oauth_token_secret: String, user_id: String, screen_name: String }}
+ * Verifies the credentials (token + secret) of the authenticated user.
+ * @param { String } token The OAuth access token.
+ * @param { String } secret The OAuth access token secret.
+ * @returns { {} } The parsed UserObject of the authenticated user.
  */
-async function getAccessToken (oAuthToken, oAuthVerifier) {
-  const result = await makeTwitterCall({
-    method: 'POST',
-    url: `https://api.twitter.com/oauth/access_token?oauth_token=${oAuthToken}&oauth_verifier=${oAuthVerifier}`,
-    isTextResponse: true
-  })
-
-  return result
-}
-
 async function verifyCredentials (token, secret) {
   const endpoint = 'https://api.twitter.com/1.1/account/verify_credentials.json'
 
@@ -155,8 +58,6 @@ async function verifyCredentials (token, secret) {
     error('Failure when verifying twitter credentials')
   }
 }
-
-// Scheduled actions
 
 /**
  * Get follower IDs of a user
@@ -199,9 +100,7 @@ async function getFollowers ({ userId, screenName, cursor, limit }) {
  * @note User object docs: https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/user-object
  * @param { String[] } userIds An optional array of userIds. If undefined, `screenNames` is required.
  * @param { String[] } screenNames An optional array of screenNames. If undefined, `userIds` is required.
- * @returns { [{ id, name, location, url, description, verified, followers, following, listed, favourites, statuses, created, profileImage
-defaultProfile
-defaultImage }] } An array of twitter user objects
+ * @returns { [{ id, name, location, url, description, verified, followers, following, listed, favourites, statuses, created, profileImage, defaultProfile, defaultImage }] } An array of twitter user objects
  */
 async function hydrate ({ userIds, screenNames }) {
   const maxAllowed = 100
@@ -222,23 +121,38 @@ async function hydrate ({ userIds, screenNames }) {
 }
 
 /**
- *
+ * Sends a direct message from the authenticated user to a userId.
  * @note Endpoint docs: https://developer.twitter.com/en/docs/direct-messages/sending-and-receiving/api-reference/new-event
- * @param {*} param0
+ * @param { String } id The numerical ID of the user
+ * @param { String } message The text of the DM. Max 10,000 characters.
+ * @param { String } token The sending user's OAuth access token.
+ * @param { String } secret The sending user's OAuth access token secret.
  */
-async function sendDirectMessage (id, message) {
-  const event = {
-    type: 'message_create',
-    message_create: {
-      target: { recipient_id: id },
-      message_data: { text: message }
+async function sendDirectMessage (id, message, token, secret) {
+  const endpoint = 'https://api.twitter.com/1.1/direct_messages/events/new.json'
+  const body = {
+    event: {
+      type: 'message_create',
+      message_create: {
+        target: { recipient_id: id },
+        message_data: { text: message }
+      }
     }
   }
 
-  const result = await makeTwitterCall({
-    url: 'https://api.twitter.com/1.1/direct_messages/events/new.json',
-    body: event
+  const { oAuthHeader } = twitterSignHmac({
+    method: 'POST',
+    url: endpoint,
+    oAuthToken: token,
+    oAuthTokenSecret: secret
   })
+
+  const result = await makeTwitterCall({
+    url: endpoint,
+    body,
+    oAuthHeader
+  })
+  return result
 }
 
 //
@@ -271,11 +185,10 @@ function processUserObject (user) {
 }
 
 module.exports = {
+  getRequestTokenAndGetRedirectUrl,
+  redirectCallback,
+  verifyCredentials,
   getFollowers,
   hydrate,
-  getRequestToken,
-  redirect,
-  redirectCallback,
-  getAccessToken,
-  verifyCredentials
+  sendDirectMessage
 }
