@@ -1,7 +1,7 @@
 const fetch = require('node-fetch')
 const { log, error } = require('./log')
 
-async function makeRequest ({ url, body, headers, method = 'GET' }) {
+async function makeRequest ({ url, body, headers, method = 'GET', isTextResponse = false }) {
   const newHeaders = {
     'Content-Type': 'application/json',
     ...headers
@@ -36,12 +36,27 @@ async function makeRequest ({ url, body, headers, method = 'GET' }) {
     error(`${parsedMethod} request response code: ${status}: ${statusText} for url: ${shortenedUrl}`)
   }
 
-  const result = await response.json().catch((e) => {
-    // No JSON response body returned
-    log(`${parsedMethod} request successful, no JSON body returned for url: ${shortenedUrl}`)
+  try {
+    const result = !isTextResponse ? await response.json() : await response.text()
+    log(`${parsedMethod} request successful, valid ${!isTextResponse ? 'JSON' : 'text'} body returned for url: ${shortenedUrl}`)
+    return !isTextResponse ? result : queryStringToJson(result)
+  } catch (e) {
+    log(`${parsedMethod} request successful, no ${!isTextResponse ? 'JSON' : 'text'} body returned for url: ${shortenedUrl}`)
     return {}
+  }
+}
+
+//
+// Helpers
+//
+
+function queryStringToJson (queryString) {
+  const pairs = queryString.split('&')
+  const result = {}
+  pairs.map(pair => {
+    const components = pair.split('=')
+    result[components[0]] = components[1] || ''
   })
-  log(`${parsedMethod} request successful, valid JSON body returned for url: ${shortenedUrl}`)
   return result
 }
 
