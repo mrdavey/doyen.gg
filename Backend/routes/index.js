@@ -58,4 +58,22 @@ router.get('/dm', async (req, res) => {
   }
 })
 
+const lowdb = require('../model/user')
+
+router.get('/dbget', async (req, res) => {
+  res.json(await lowdb.getUser('user'))
+})
+router.get('/dbset', async (req, res) => {
+  res.json(await lowdb.setUser('user', 'david'))
+})
+router.get('/dbgetf', async (req, res) => {
+  res.json(await lowdb.getFollower('follower'))
+})
+router.get('/dbsetf', async (req, res) => {
+  res.json(await lowdb.setFollower('follower1', 'daveytea'))
+})
+router.get('/dbsetf2', async (req, res) => {
+  res.json(await lowdb.setFollower('follower2', 'adriana_truong'))
+})
+
 module.exports = router
