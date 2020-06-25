@@ -100,10 +100,10 @@ async function getFollowers ({ userId, screenName, cursor, limit }) {
  * @note User object docs: https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/user-object
  * @param { String[] } userIds An optional array of userIds. If undefined, `screenNames` is required.
  * @param { String[] } screenNames An optional array of screenNames. If undefined, `userIds` is required.
- * @returns { [{ id, name, location, url, description, verified, followers, following, listed, favourites, statuses, created, profileImage, defaultProfile, defaultImage }] } An array of twitter user objects
+ * @returns { [{ id, name, location, url, description, verified, followers, following, listed, favourites, statuses, created, profileImage, defaultProfile, defaultImage, lastUpdate }] } An array of twitter user objects
  */
 async function hydrate ({ userIds, screenNames }) {
-  const maxAllowed = 100
+  const maxAllowed = 10
   let params = '' // `include_entities=true&`
 
   if (userIds) {
@@ -180,7 +180,8 @@ function processUserObject (user) {
     created: user.created_at,
     profileImage: user.profile_image_url_https.replace('normal', '400x400'),
     defaultProfile: user.default_profile,
-    defaultImage: user.default_profile_image
+    defaultImage: user.default_profile_image,
+    lastUpdate: Date.now()
   }
 }
 
