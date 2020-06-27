@@ -41,11 +41,11 @@ async function getUserData () {
  * @param { Number } limit The number of followers to download. Twitter hard limit is 5000.
  * @returns { { before: Number, after: Number, nextCursor: String } } A dictionary representing the 'before' and 'after' follower count in the datastore + the next cursor used by Twitter API
  */
-async function downloadFollowerIds (userObj, limit) {
+async function downloadFollowerIds (userObj) {
   const before = await getFollowerCount()
-  let cappedLimit = limit
+  let cappedLimit = 5000
 
-  if (process.env.LOCAL_INSTANCE) {
+  if (process.env.LOCAL_INSTANCE && Number(before)) {
     // We apply a local instance limit as followers JSON file may grow too large
     cappedLimit = Math.min(Number(process.env.LOCAL_FOLLOWER_LIMIT) - Number(before), 5000)
   }
@@ -58,7 +58,6 @@ async function downloadFollowerIds (userObj, limit) {
   if (process.env.LOCAL_INSTANCE && cappedLimit < 5000) {
     return { before, after, nextCursor: 0 }
   }
-
   return { before, after, nextCursor: result.next }
 }
 

@@ -14,11 +14,13 @@ async function fetchFollowersAndHydrate () {
   const userObj = await getUserData()
   if (!userObj) error('User not logged in yet')
   const followersCount = Number(userObj.user.followers)
+
+  // If followersCount < 75k, we can fetch and hydrate in one go safely
   const estimatedTime = followersCount < 75000 ? '1' : (followersCount / 5000).toFixed(2)
 
-  if (followersCount < 75) {
+  if (followersCount < 75000) {
     info('Using burst mode for fetching and hydrating followers...')
-    await loopLocal(fetchAndHydrateLoop, userObj, 1.5)
+    await loopLocal(fetchAndHydrateLoop, userObj, 1.5) // 1.5s buffer for writing to disk
     info(`Burst mode hydration completed for ${followersCount} followers!`)
   } else {
     info('Fetching and hydrating followers every minute')
@@ -68,11 +70,7 @@ async function fetchAndHydrateLoop (userObj) {
     log(`${idsMsg}, none needed hydration.`)
   }
 
-  if (Number(nextCursor) !== 0) {
-    return true
-  } else {
-    return false
-  }
+  return Number(nextCursor) !== 0
 }
 
 /**
