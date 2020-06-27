@@ -1,5 +1,5 @@
 const fetch = require('node-fetch')
-const { log, error } = require('./log')
+const { network, error } = require('./log')
 
 async function makeRequest ({ url, body, headers, method = 'GET', isTextResponse = false }) {
   const newHeaders = {
@@ -38,10 +38,10 @@ async function makeRequest ({ url, body, headers, method = 'GET', isTextResponse
 
   try {
     const result = !isTextResponse ? await response.json() : await response.text()
-    log(`${parsedMethod} request successful, valid ${!isTextResponse ? 'JSON' : 'text'} body returned for url: ${shortenedUrl}`)
+    network(`${parsedMethod} request successful, valid ${!isTextResponse ? 'JSON' : 'text'} body returned for url: ${shortenedUrl}`)
     return !isTextResponse ? result : queryStringToJson(result)
   } catch (e) {
-    log(`${parsedMethod} request successful, no ${!isTextResponse ? 'JSON' : 'text'} body returned for url: ${shortenedUrl}`)
+    network(`${parsedMethod} request successful, no ${!isTextResponse ? 'JSON' : 'text'} body returned for url: ${shortenedUrl}`)
     return {}
   }
 }

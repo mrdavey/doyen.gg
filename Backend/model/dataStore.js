@@ -1,11 +1,6 @@
 const { log } = require('../controllers/log')
 const LowDB = require('./coordinators/lowdb')
 
-const TYPES = {
-  USER: 'user',
-  FOLLOWERS: 'followers'
-}
-
 let db
 
 if (process.env.LOCAL_INSTANCE) {
@@ -14,62 +9,50 @@ if (process.env.LOCAL_INSTANCE) {
   log('Not running a local instance!')
 }
 
-async function getUserValue (key) {
-  return await db.get(TYPES.USER, key)
+async function setUserAuthValues (dictValues) {
+  return await db.setUserAuthValues(dictValues)
+}
+async function setUserObjValues (dictValues) {
+  return await db.setUserObjValues(dictValues)
 }
 
-async function setUserValue (key, value) {
-  return await db.set(TYPES.USER, key, value)
+async function getUserEntity () {
+  return await db.getUserEntity()
 }
 
-async function getUserObject () {
-  return await db.getAll(TYPES.USER)
+async function getDownloadedFollowersCursor () {
+  return await db.getDownloadedFollowersCursor()
 }
 
-async function getFollower (key) {
-  return await db.get(TYPES.FOLLOWERS, key)
+async function getUnhydratedFollowers () {
+  return await db.getUnhydratedFollowers()
 }
 
-async function getFollowersObject () {
-  return await db.getAll(TYPES.FOLLOWERS)
-}
-
-async function setFollower (key, value) {
-  return await db.set(TYPES.FOLLOWERS, key, value)
+async function getOutdatedFollowers (staleDays = 30) {
+  return await db.getOutdatedFollowers(staleDays)
 }
 
 // ids = array of strings
-async function setFollowersIds (ids, nextCursor, prevCursor) {
-  const dict = {}
-  ids.map(id => {
-    dict[id] = {}
-    return null
-  })
-  await db.add(TYPES.FOLLOWERS, 'followers', dict)
-  await db.set(TYPES.FOLLOWERS, 'cursor', { next: nextCursor, prev: prevCursor })
+async function setDownloadedFollowersEntity (ids, nextCursor, prevCursor) {
+  return await db.setDownloadedFollowersEntity(ids, nextCursor, prevCursor)
 }
 
 async function hydrateFollowerIds (hydratedArray) {
-  const dict = {}
-  hydratedArray.map(hydrated => {
-    dict[hydrated.id] = hydrated
-    delete dict[hydrated.id].id
-  })
-  await db.add(TYPES.FOLLOWERS, 'followers', dict)
+  return await db.hydrateFollowerIds(hydratedArray)
 }
 
 async function getFollowerCount () {
-  return await db.getCount(TYPES.FOLLOWERS, 'followers')
+  return await db.getFollowerCount()
 }
 
 module.exports = {
-  getUserValue,
-  setUserValue,
-  getUserObject,
-  getFollower,
-  getFollowersObject,
-  setFollower,
-  setFollowersIds,
+  setUserAuthValues,
+  setUserObjValues,
+  getUserEntity,
+  getDownloadedFollowersCursor,
+  getUnhydratedFollowers,
+  getOutdatedFollowers,
+  setDownloadedFollowersEntity,
   hydrateFollowerIds,
   getFollowerCount
 }

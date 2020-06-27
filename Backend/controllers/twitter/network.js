@@ -1,6 +1,6 @@
 const { twitterSignHmac } = require('./authSign')
 const { makeRequest } = require('../fetch')
-const { log, error } = require('../log')
+const { network, error } = require('../log')
 
 const key = process.env.TWITTER_KEY
 const secret = process.env.TWITTER_SECRET
@@ -14,7 +14,7 @@ let bearerToken
  * Get the bearer token used for Twitter API calls for 'App' rate limiting
  */
 async function adminGetBearerToken () {
-  log('Getting latest Twitter Bearer token')
+  network('Getting latest Twitter Bearer token')
   const headers = {
     Authorization: `Basic ${Buffer.from(key + ':' + secret).toString('base64')}`,
     'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
@@ -29,7 +29,7 @@ async function adminGetBearerToken () {
 
   // Token is only scoped to this file
   bearerToken = result.access_token
-  log(`Bearer token received: ${bearerToken.slice(0, 3)}...${bearerToken.slice(bearerToken.length - 8, bearerToken.length - 1)}`)
+  network(`Bearer token received: ${bearerToken.slice(0, 3)}...${bearerToken.slice(bearerToken.length - 8, bearerToken.length - 1)}`)
 }
 
 //

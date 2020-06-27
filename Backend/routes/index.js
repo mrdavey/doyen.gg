@@ -28,7 +28,6 @@ router.get('/', async (req, res) => {
 })
 
 const dataController = require('../controllers/dataController')
-
 // Needs to be same subdomain as TWITTER_OAUTH_CALLBACK_URL
 
 router.get('/twitterOAuth', async (req, res) => {
@@ -47,30 +46,31 @@ router.get('/app', async (req, res) => {
   }
 })
 
-router.get('/followers', async (req, res) => {
+const scheduler = require('../controllers/scheduler')
+router.get('/fh', async (req, res) => {
   const userObj = await dataController.getUserData()
   if (userObj) {
-    const beforeAfter = await dataController.downloadFollowerIds(userObj.user.id, userObj)
-    res.json(beforeAfter)
+    scheduler.fetchFollowersAndHydrate()
+    res.json('Running fetch and hydrate...')
   } else {
     res.json({ error: 'User not authenticated. Go to "/"' })
   }
 })
 
-router.get('/hydrate', async (req, res) => {
-  const userObj = await dataController.getUserData()
-  if (userObj) {
-    const followers = await dataController.getDownloadedFollowers()
-    if (followers) {
-      const count = await dataController.hydrateFollowers(followers, userObj)
-      res.json({ count })
-    } else {
-      res.json({ error: 'No followers downloaded yet' })
-    }
-  } else {
-    res.json({ error: 'User not authenticated. Go to "/"' })
-  }
-})
+// router.get('/hydrate', async (req, res) => {
+//   const userObj = await dataController.getUserData()
+//   if (userObj) {
+//     const followers = await dataController.getDownloadedFollowers()
+//     if (followers) {
+//       const count = await dataController.hydrateFollowers(followers, userObj)
+//       res.json({ count })
+//     } else {
+//       res.json({ error: 'No followers downloaded yet' })
+//     }
+//   } else {
+//     res.json({ error: 'User not authenticated. Go to "/"' })
+//   }
+// })
 
 // router.get('/dm', async (req, res) => {
 //   const userObj = await dataController.getUserData()

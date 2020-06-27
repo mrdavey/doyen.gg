@@ -1,7 +1,7 @@
 const { makeTwitterCall, getRequestToken, getRedirectUrl, getAccessToken } = require('./network')
 const { stringifyParamsForUrl } = require('../fetch')
 const { twitterSignHmac } = require('./authSign')
-const { log, error } = require('../log')
+const { network, error } = require('../log')
 
 /**
  * Gets the request token and returns the redirect URL for OAuth v.1.0 authentication.
@@ -10,7 +10,7 @@ const { log, error } = require('../log')
  */
 async function getRequestTokenAndGetRedirectUrl () {
   const result = await getRequestToken()
-  log(`Request token: ${result.token}`)
+  network(`Request token: ${result.token}`)
   return getRedirectUrl(result.token)
 }
 
@@ -25,7 +25,7 @@ async function redirectCallback (params) {
   const oAuthVerifier = params.oauth_verifier
 
   // TODO: - compare oAuthToken with original token
-  log(`OAuthToken: ${oAuthToken}`)
+  network(`OAuthToken: ${oAuthToken}`)
 
   // Exchange OAuth request token with OAuth access token and secret
   return await getAccessToken(oAuthToken, oAuthVerifier)
@@ -71,7 +71,7 @@ async function verifyCredentials (token, secret) {
  * @param { String } tokenSecret Required for OAuth call, otherwise app level call.
  * @returns { { ids: String[], next: String, previous: String, error: String } } An array of twitter string IDs, the cursor for next page, the cursor for current page, error if relevant
  */
-async function getFollowers({ userId, screenName, cursor, limit, token, tokenSecret }) {
+async function getFollowers ({ userId, screenName, cursor, limit, token, tokenSecret }) {
   const params = { stringify_ids: true }
 
   if (userId) {
@@ -82,7 +82,7 @@ async function getFollowers({ userId, screenName, cursor, limit, token, tokenSec
   }
 
   if (cursor) params.cursor = cursor
-  params.count = limit || 5000 // default to highest limit
+  params.count = Math.min(limit || 5000, 5000)
 
   const endpoint = 'https://api.twitter.com/1.1/followers/ids.json'
   const urlParams = stringifyParamsForUrl(params)
@@ -90,7 +90,7 @@ async function getFollowers({ userId, screenName, cursor, limit, token, tokenSec
   let result
 
   if (token && tokenSecret) {
-    log('Using OAuth token')
+    network('Using OAuth token')
     const { oAuthHeader } = twitterSignHmac({
       method: 'GET',
       url: endpoint,
@@ -106,7 +106,7 @@ async function getFollowers({ userId, screenName, cursor, limit, token, tokenSec
       return { ids: null, next: null, previous: null, error: e.message }
     })
   } else {
-    log('No OAuth token given, using Bearer (App) token instead')
+    network('No OAuth token given, using Bearer (App) token instead')
     result = await makeTwitterCall({
       url: `${endpoint}?${urlParams}`
     }).catch((e) => {
@@ -140,7 +140,7 @@ async function getFollowers({ userId, screenName, cursor, limit, token, tokenSec
  * @returns { [{ id, name, location, url, description, verified, followers, following, listed, favourites, statuses, created, profileImage, defaultProfile, defaultImage, lastUpdate }] } An array of twitter user objects
  */
 async function hydrate ({ userIds, screenNames, token, tokenSecret }) {
-  const maxAllowed = 10 // max is 100
+  const maxAllowed = 100
   const params = { }
 
   if (userIds) {
@@ -156,7 +156,7 @@ async function hydrate ({ userIds, screenNames, token, tokenSecret }) {
   let result
 
   if (token && tokenSecret) {
-    log('Using OAuth token')
+    network('Using OAuth token')
     const { oAuthHeader } = twitterSignHmac({
       method: 'GET',
       url: endpoint,
@@ -170,7 +170,7 @@ async function hydrate ({ userIds, screenNames, token, tokenSecret }) {
       oAuthHeader
     })
   } else {
-    log('No OAuth token given, using Bearer (App) token instead')
+    network('No OAuth token given, using Bearer (App) token instead')
     result = await makeTwitterCall({
       url: `${endpoint}?${urlParams}`
     })
