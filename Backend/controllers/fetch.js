@@ -60,4 +60,10 @@ function queryStringToJson (queryString) {
   return result
 }
 
-module.exports = { makeRequest }
+function stringifyParamsForUrl(dict) {
+  return Object.keys(dict).map(key => {
+    return `${key}=${dict[key]}`
+  }).join('&')
+}
+
+module.exports = { makeRequest, stringifyParamsForUrl }

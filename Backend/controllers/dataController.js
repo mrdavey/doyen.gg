@@ -17,9 +17,9 @@ async function getUserData () {
   return null
 }
 
-async function downloadFollowerIds (userId) {
+async function downloadFollowerIds (userId, userObj) {
   const before = await getFollowerCount()
-  const result = await getFollowers({ userId, limit: 100 })
+  const result = await getFollowers({ userId, limit: 100, token: userObj.auth.token, tokenSecret: userObj.auth.tokenSecret })
   await setFollowersIds(result.ids, result.next, result.previous)
   const after = await getFollowerCount()
   return { before, after }
@@ -31,7 +31,7 @@ async function getDownloadedFollowers () {
 }
 
 // ids = {id: { }}
-async function hydrateFollowers (ids) {
+async function hydrateFollowers (ids, userObj) {
   const validIds = []
   Object.keys(ids).map(key => {
     if (ids[key].lastUpdate) {
@@ -46,7 +46,7 @@ async function hydrateFollowers (ids) {
   })
 
   if (validIds.length > 0) {
-    const results = await hydrate({ userIds: validIds })
+    const results = await hydrate({ userIds: validIds, token: userObj.auth.token, tokenSecret: userObj.auth.tokenSecret })
     await hydrateFollowerIds(results)
     return results.length
   } else {

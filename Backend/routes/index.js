@@ -50,7 +50,7 @@ router.get('/app', async (req, res) => {
 router.get('/followers', async (req, res) => {
   const userObj = await dataController.getUserData()
   if (userObj) {
-    const beforeAfter = await dataController.downloadFollowerIds(userObj.user.id)
+    const beforeAfter = await dataController.downloadFollowerIds(userObj.user.id, userObj)
     res.json(beforeAfter)
   } else {
     res.json({ error: 'User not authenticated. Go to "/"' })
@@ -62,7 +62,7 @@ router.get('/hydrate', async (req, res) => {
   if (userObj) {
     const followers = await dataController.getDownloadedFollowers()
     if (followers) {
-      const count = await dataController.hydrateFollowers(followers)
+      const count = await dataController.hydrateFollowers(followers, userObj)
       res.json({ count })
     } else {
       res.json({ error: 'No followers downloaded yet' })
