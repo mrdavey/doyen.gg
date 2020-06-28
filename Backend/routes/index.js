@@ -57,6 +57,11 @@ router.get('/fh', async (req, res) => {
   }
 })
 
+const dataStore = require('../model/dataStore')
+router.get('/test', async (req, res) => {
+  const count = await dataStore.getFollowerCount()
+  res.json(count)
+})
 // router.get('/hydrate', async (req, res) => {
 //   const userObj = await dataController.getUserData()
 //   if (userObj) {
@@ -72,16 +77,16 @@ router.get('/fh', async (req, res) => {
 //   }
 // })
 
-// router.get('/dm', async (req, res) => {
-//   const userObj = await dataController.getUserData()
-//   if (userObj) {
-//     const userId = ''
-//     const message = 'Hi. Test message from Doyen.gg'
-//     const result = await twitter.sendDirectMessage(userId, message, userObj.auth.token, userObj.auth.tokenSecret)
-//     res.json(result)
-//   } else {
-//     res.json({ error: 'User not authenticated. Go to "/"' })
-//   }
-// })
+router.get('/dm', async (req, res) => {
+  const userObj = await dataController.getUserData()
+  if (userObj) {
+    const userIds = ['15982471', '1081']
+    const message = 'Hi again. Test message from Doyen.gg'
+    const result = await scheduler.sendDMs(userIds, message, true)
+    res.json(result)
+  } else {
+    res.json({ error: 'User not authenticated. Go to "/"' })
+  }
+})
 
 module.exports = router

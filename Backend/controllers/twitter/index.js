@@ -1,7 +1,7 @@
 const { makeTwitterCall, getRequestToken, getRedirectUrl, getAccessToken } = require('./network')
 const { stringifyParamsForUrl } = require('../fetch')
 const { twitterSignHmac } = require('./authSign')
-const { network, error } = require('../log')
+const { network, error, log } = require('../log')
 
 /**
  * Gets the request token and returns the redirect URL for OAuth v.1.0 authentication.
@@ -194,8 +194,9 @@ async function hydrate ({ userIds, screenNames, token, tokenSecret }) {
  * @param { String } message The text of the DM. Max 10,000 characters.
  * @param { String } token The sending user's OAuth access token.
  * @param { String } tokenSecret The sending user's OAuth access token secret.
+ * @param { Boolean } coldRun When true, the DM is not actually sent to Twitters API.
  */
-async function sendDirectMessage (id, message, token, tokenSecret) {
+async function sendDirectMessage (id, message, token, tokenSecret, coldRun = true) {
   const endpoint = 'https://api.twitter.com/1.1/direct_messages/events/new.json'
   const body = {
     event: {
@@ -214,21 +215,39 @@ async function sendDirectMessage (id, message, token, tokenSecret) {
     oAuthTokenSecret: tokenSecret
   })
 
-  const result = await makeTwitterCall({
-    url: endpoint,
-    body,
-    oAuthHeader
-  })
-
-  if (result.errors) {
-    let errors = ''
-    result.errors.map((error) => {
-      errors += error.message + ' '
+  if (coldRun) {
+    log(`Sending DM to ID: ${id} (cold run)`)
+    return {
+      event: {
+        type: 'message_create_cold',
+        message_create: {
+          target: {
+            recipient_id: `${id}`
+          },
+          message_data: {
+            text: `${message}`
+          }
+        }
+      }
+    }
+  } else {
+    log(`Sending DM to ID: ${id}`)
+    const result = await makeTwitterCall({
+      url: endpoint,
+      body,
+      oAuthHeader
     })
-    throw Error(`Twitter error: ${errors}`)
-  }
 
-  return result
+    if (result.errors) {
+      let errors = ''
+      result.errors.map((error) => {
+        errors += error.message + ' '
+      })
+      throw Error(`Twitter error: ${errors}`)
+    }
+
+    return result
+  }
 }
 
 //

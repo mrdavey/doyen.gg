@@ -1,3 +1,4 @@
+const { convertTimestampToSeconds } = require('../helpers')
 const { log } = require('../controllers/log')
 const LowDB = require('./coordinators/lowdb')
 
@@ -45,6 +46,28 @@ async function getFollowerCount () {
   return await db.getFollowerCount()
 }
 
+/**
+ * Gets number of DMs that are left to send, staying within rate limits
+ * @returns { { remaining: Number, periodEnds: Number }} A dictionary of remaining DMs to send and the seconds timestamp the period resets
+ */
+async function getDMsLeftToSend () {
+  const dmLimitPerDay = 1000
+  const lastDMPeriod = await db.getLastDMPeriod()
+  if (lastDMPeriod) {
+    const now = convertTimestampToSeconds(Date.now())
+    const end = convertTimestampToSeconds(lastDMPeriod.end)
+    if (end > now) {
+      return { remaining: dmLimitPerDay - lastDMPeriod.dmCount, periodEnds: end }
+    }
+  }
+  return { remaining: dmLimitPerDay, periodEnds: convertTimestampToSeconds(Date.now()) }
+}
+
+async function setLatestDMCampaign (campaign, ids) {
+  await db.setLastDMCampaign(campaign)
+  await db.setFollwersLastCampaign(campaign, ids)
+}
+
 module.exports = {
   setUserAuthValues,
   setUserObjValues,
@@ -54,5 +77,7 @@ module.exports = {
   getOutdatedFollowers,
   setDownloadedFollowersEntity,
   hydrateFollowerIds,
-  getFollowerCount
+  getFollowerCount,
+  getDMsLeftToSend,
+  setLatestDMCampaign
 }

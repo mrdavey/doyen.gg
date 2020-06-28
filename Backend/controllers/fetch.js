@@ -60,7 +60,7 @@ function queryStringToJson (queryString) {
   return result
 }
 
-function stringifyParamsForUrl(dict) {
+function stringifyParamsForUrl (dict) {
   return Object.keys(dict).map(key => {
     return `${key}=${dict[key]}`
   }).join('&')

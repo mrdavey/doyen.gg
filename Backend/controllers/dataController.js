@@ -7,6 +7,8 @@ const {
   getDownloadedFollowersCursor,
   getUnhydratedFollowers,
   hydrateFollowerIds,
+  getDMsLeftToSend,
+  setLatestDMCampaign
 } = require('../model/dataStore')
 const { getFollowers, hydrate } = require('./twitter')
 
@@ -82,10 +84,35 @@ async function hydrateFollowers (ids, userObj) {
   return results.length
 }
 
+/**
+ * Gets number of DMs that are left to send, staying within rate limits
+ * @returns { { remaining: Number, periodEnds: Number }} A dictionary of remaining DMs to send and the seconds timestamp the period resets.
+ */
+async function getDMsRemaining () {
+  return getDMsLeftToSend()
+}
+
+/**
+ * Records the latest DM campaign that was sent
+ * @param { String[] } ids An array of IDs that successfully received DMs
+ * @param { String } message The message that was sent as part of the campaign
+ */
+async function recordDMCampaign (ids, message) {
+  const campaign = {
+    start: Date.now(),
+    message,
+    ids
+  }
+
+  await setLatestDMCampaign(campaign, ids)
+}
+
 module.exports = {
   saveUserData,
   getUserData,
   downloadFollowerIds,
   getFollowersToHydrate,
-  hydrateFollowers
+  hydrateFollowers,
+  getDMsRemaining,
+  recordDMCampaign
 }

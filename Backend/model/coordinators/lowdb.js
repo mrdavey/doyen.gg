@@ -3,7 +3,8 @@ const FileAsync = require('lowdb/adapters/FileAsync')
 
 const TYPES = {
   USER: 'user',
-  FOLLOWERS: 'followers'
+  FOLLOWERS: 'followers',
+  DMS: 'dms'
 }
 
 class LowDB {
@@ -28,8 +29,8 @@ class LowDB {
     const db = await this._getDB(type)
     const current = db.get(key).cloneDeep().value()
     if (current) {
-      Object.keys(values).map(valueKey => {
-        current[valueKey] = values[valueKey]
+      Object.keys(values).map((valueKey) => {
+        current[valueKey] = { ...current[valueKey], ...values[valueKey] }
       })
       return db.set(key, current).write()
     } else {
@@ -99,7 +100,7 @@ class LowDB {
     const followers = followersObj.followers || null
     if (followers) {
       const unhydrated = []
-      Object.keys(followers).map(id => {
+      Object.keys(followers).map((id) => {
         if (!followers[id].hydrated) {
           unhydrated.push(id)
         }
@@ -118,7 +119,7 @@ class LowDB {
       Object.keys(followers).map((key) => {
         if (followers[key].lastUpdate) {
           const nowSeconds = Date.now() / 1000
-          if (nowSeconds - followers[key].lastUpdate / 1000 > (staleDays * 24 * 60 * 60)) {
+          if (nowSeconds - followers[key].lastUpdate / 1000 > staleDays * 24 * 60 * 60) {
             validIds.push(key)
           }
         } else {
@@ -131,7 +132,7 @@ class LowDB {
 
   async setDownloadedFollowersEntity (ids, nextCursor, prevCursor) {
     const dict = {}
-    ids.map(id => {
+    ids.map((id) => {
       dict[id] = { hydrated: false }
       return null
     })
@@ -141,16 +142,66 @@ class LowDB {
 
   async hydrateFollowerIds (hydratedArray) {
     const dict = {}
-    hydratedArray.map(hydrated => {
-      dict[hydrated.id] = hydrated
+    hydratedArray.map((hydrated) => {
+      if (dict[hydrated.id]) {
+        dict[hydrated.id] = { ...dict[hydrated.id], ...hydrated }
+      } else {
+        dict[hydrated.id] = hydrated
+      }
       dict[hydrated.id].hydrated = true
-      delete dict[hydrated.id].id
     })
     await this._add(TYPES.FOLLOWERS, 'followers', dict)
   }
 
   async getFollowerCount () {
     return await this._getCount(TYPES.FOLLOWERS, 'followers')
+  }
+
+  //
+  // DM related
+  //
+
+  // campaign = { start, message, ids }
+  async getLastDMCampaign () {
+    return await this._get(TYPES.DMS, 'lastCampaign')
+  }
+
+  // @returns { end, dmCount }
+  async getLastDMPeriod () {
+    return await this._get(TYPES.DMS, 'lastPeriod')
+  }
+
+  async _setLastDMPeriod (timestamp, dmCount) {
+    const lastPeriod = await this.getLastDMPeriod()
+    if (lastPeriod && lastPeriod.end > timestamp) {
+      await this._set(TYPES.DMS, 'lastPeriod', { end: lastPeriod.end, dmCount: lastPeriod.dmCount + dmCount })
+    } else {
+      await this._set(TYPES.DMS, 'lastPeriod', { end: timestamp + 86400000, dmCount })
+    }
+  }
+
+  async setLastDMCampaign (newCampaign) {
+    const lastCampaign = await this.getLastDMCampaign()
+    if (lastCampaign) {
+      const campaignHistory = await this._get(TYPES.DMS, 'history')
+      if (!campaignHistory) {
+        await this._add(TYPES.DMS, 'history', { [lastCampaign.start]: lastCampaign })
+      } else {
+        campaignHistory[lastCampaign.start] = lastCampaign
+        await this._set(TYPES.DMS, 'history', campaignHistory)
+      }
+    }
+    await this._set(TYPES.DMS, 'lastCampaign', newCampaign)
+  }
+
+  async setFollwersLastCampaign (campaign, ids) {
+    const updatedDict = {}
+    ids.map((id) => {
+      updatedDict[id] = { lastCampaignId: campaign.start }
+      return null
+    })
+    await this._add(TYPES.FOLLOWERS, 'followers', updatedDict)
+    await this._setLastDMPeriod(campaign.start, ids.length || 0)
   }
 }
 
