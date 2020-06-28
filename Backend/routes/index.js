@@ -62,23 +62,25 @@ const { FILTERS } = require('../model/enums')
 router.get('/filter', async (req, res) => {
   const userObj = await dataController.getUserData()
   if (userObj) {
-    const filtered = await dataController.filterFollowers(FILTERS.MOST_ACTIVE_BY_F_RATIO, null, 0.5)
+    const filtered = await dataController.filterFollowers({ filter: FILTERS.MOST_ACTIVE_BY_F_RATIO, ratio: 1.2 })
     res.json(filtered)
   } else {
     res.json({ error: 'User not authenticated. Go to "/"' })
   }
 })
 
-// router.get('/test', async (req, res) => {
-//   res.json(result)
-// })
+router.get('/test', async (req, res) => {
+  const userObj = await dataController.getUserData()
+  const result = await twitter.hydrate({ userIds: ['15982471'], token: userObj.auth.token, tokenSecret: userObj.auth.tokenSecret })
+  res.json(result)
+})
 
 router.get('/dm', async (req, res) => {
   const userObj = await dataController.getUserData()
   if (userObj) {
     const userIds = ['15982471', '1081']
     const message = 'Hi again. Test message from Doyen.gg'
-    const result = await scheduler.sendDMs(userIds, message, true)
+    const result = await scheduler.sendDMs(userIds, message)
     res.json(result)
   } else {
     res.json({ error: 'User not authenticated. Go to "/"' })

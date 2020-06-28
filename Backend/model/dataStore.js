@@ -71,33 +71,36 @@ async function setLatestDMCampaign (campaign, ids) {
 /**
  * Get the top followers by their followers:following ratio
  * @param { Number } ratio The followers:following ratio. Higher means more followers.
+ * @param { Number } minTimestamp The minimum timestamp for followers most recent DM campaign
  * @param { Boolean } onlyVerified Only include verified accounts
  * @returns An array of userObjects, sorted by followers:following ratio, highest -> lowest
  */
-async function getTopFollowersByRatio (ratio, onlyVerified = null) {
+async function getTopFollowersByRatio (ratio, minTimestamp, onlyVerified = null) {
   const sortOperation = (f) => {
     return f.followers / f.following
   }
-  return (await db.performOperation((f) => ratioOperation(f, ratio), sortOperation, onlyVerified)).reverse()
+  return (await db.performOperation((f) => ratioOperation(f, ratio, minTimestamp), sortOperation, onlyVerified)).reverse()
 }
 
 /**
  * Get what we consider the 'most active' followers. This algo prefers older accounts that are also listed by others.
+ * @param { Number } minTimestamp The minimum timestamp for followers most recent DM campaign
  * @param { Boolean } onlyVerified Only include verified accounts
  * @returns An array of userObjects, sorted by 'most active' followers, highest -> lowest
  */
-async function getMostActiveFollowers (onlyVerified = null) {
-  return (await db.performOperation(f => { return f }, mostActiveSort, onlyVerified)).reverse()
+async function getMostActiveFollowers (minTimestamp, onlyVerified = null) {
+  return (await db.performOperation(f => minTimestampOperation(f, minTimestamp), mostActiveSort, onlyVerified)).reverse()
 }
 
 /**
  * Get the top followers by ratio, sorting by 'most active'.
  * @param { Number } ratio The followers:following ratio. Higher means more followers.
+ * @param { Number } minTimestamp The minimum timestamp for followers most recent DM campaign
  * @param { Boolean } onlyVerified Only include verified accounts
  * @returns An array of userObjects, sorted by 'most active', highest -> lowest
  */
-async function getTopRatioAndActiveFollowers (ratio, onlyVerified = null) {
-  return (await db.performOperation(f => ratioOperation(f, ratio), mostActiveSort, onlyVerified)).reverse()
+async function getTopRatioAndActiveFollowers (ratio, minTimestamp, onlyVerified = null) {
+  return (await db.performOperation(f => ratioOperation(f, ratio, minTimestamp), mostActiveSort, onlyVerified)).reverse()
 }
 
 //
@@ -107,20 +110,45 @@ async function getTopRatioAndActiveFollowers (ratio, onlyVerified = null) {
 /**
  * The function used for filtering users by follower:following ratio
  * @param { {} } f The follower user object
+ * @param { Number } ratio The followers:following ratio. Higher means more followers.
+ * @param { Number } minTimestamp The minimum timestamp for followers most recent DM campaign
  */
-const ratioOperation = (f, ratio) => {
-  return f.followers / f.following > ratio
+const ratioOperation = (f, ratio, minTimestamp) => {
+  const aboveRatio = f.followers / f.following > ratio
+  if (minTimestamp) {
+    return aboveRatio && (!f.lastCampaignId || minTimestamp >= f.lastCampaignId)
+  }
+  return aboveRatio
 }
 
 /**
  * The function used for sorting by 'most active'
- * This algo prefers older accounts that are also listed by others.
+ * This algo prefers older accounts (that have recently tweeted) that are also listed by others.
  * @param { {} } f The follower user object
  */
 const mostActiveSort = (f) => {
-  const weights = { listed: 2, favourites: 1, statuses: 2, created: 4 }
-  const createdScore = weights.created * ((Date.now() / 1000 - convertTimestampToSeconds(Date.parse(f.created))) / 86400 / 30)
-  return f.listed * weights.listed * (f.favourites * weights.favourites + f.statuses * weights.statuses + createdScore)
+  const weights = { listed: 2, favourites: 0.5, statuses: 0.5, created: 1, recentTweet: 10 }
+  const createdScore = weights.created * (convertTimestampToSeconds(Date.now()) - (convertTimestampToSeconds(f.created)) / 86400 / 30)
+
+  // Folowers who have tweeted in last 90 days get high score, followers who have not tweeted in 90 days get penalised
+  const recentTweetScore = f.lastTweet
+    ? (weights.recentTweet * (convertTimestampToSeconds(f.lastTweet) - (convertTimestampToSeconds(Date.now()) - 7776000)))
+    : -1
+  const listedScore = f.listed * weights.listed
+  const favStatCreateScore = f.favourites * weights.favourites + f.statuses * weights.statuses + createdScore
+  return listedScore * (favStatCreateScore + recentTweetScore)
+}
+
+/**
+ * The function used for filtering by last DM campaign minTimestamp
+ * @param { {} } f The follower user object
+ * @param { Number } minTimestamp The minimum timestamp for followers most recent DM campaign
+ */
+const minTimestampOperation = (f, minTimestamp) => {
+  if (minTimestamp) {
+    return !f.lastCampaignId || minTimestamp >= f.lastCampaignId
+  }
+  return f
 }
 
 

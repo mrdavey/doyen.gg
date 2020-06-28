@@ -111,16 +111,21 @@ async function recordDMCampaign (ids, message) {
   await setLatestDMCampaign(campaign, ids)
 }
 
-async function filterFollowers (filter, onlyVerified, ratio) {
+/**
+ * Filter followers by a specific pre-set filter
+ * @param { { filter: String, onlyVerified: Boolean, ratio: Number, minTimestamp: Number } } filterProperties minTimestamp is minimum time since last DM (or no DM yet)
+ * @returns { [{}] } An array of follower objects (max 1000)
+ */
+async function filterFollowers ({ filter, onlyVerified, ratio, minTimestamp }) {
   switch (filter) {
     case FILTERS.FOLLOWERS_RATIO:
       if (!ratio) error('No ratio included')
-      return await getTopFollowersByRatio(ratio, onlyVerified)
+      return await getTopFollowersByRatio(ratio, minTimestamp, onlyVerified)
     case FILTERS.MOST_ACTIVE:
-      return await getMostActiveFollowers(onlyVerified)
+      return await getMostActiveFollowers(minTimestamp, onlyVerified)
     case FILTERS.MOST_ACTIVE_BY_F_RATIO:
-      if (!ratio) error('No ratio included')
-      return await getTopRatioAndActiveFollowers(ratio, onlyVerified)
+      if (ratio === undefined || ratio === null) error('No ratio included')
+      return await getTopRatioAndActiveFollowers(ratio, minTimestamp, onlyVerified)
     default:
       error('Invalid filter used')
   }

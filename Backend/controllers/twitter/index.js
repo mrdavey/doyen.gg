@@ -141,7 +141,7 @@ async function getFollowers ({ userId, screenName, cursor, limit, token, tokenSe
  */
 async function hydrate ({ userIds, screenNames, token, tokenSecret }) {
   const maxAllowed = 100
-  const params = { }
+  const params = { include_entities: true }
 
   if (userIds) {
     params.user_id = userIds.slice(0, maxAllowed).join(',')
@@ -276,6 +276,7 @@ function processUserObject (user) {
     profileImage: user.profile_image_url_https.replace('normal', '400x400'),
     defaultProfile: user.default_profile,
     defaultImage: user.default_profile_image,
+    lastTweet: user.status ? Date.parse(user.status.created_at) : null,
     lastUpdate: Date.now()
   }
 }
