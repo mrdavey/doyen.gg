@@ -26,7 +26,7 @@ async function fetchFollowersAndHydrate () {
     await _loopLocal(_fetchAndHydrateLoop, userObj, 1.5) // 1.5s buffer for writing to disk
     info(`Burst mode hydration completed for ${followersCount} followers!`)
   } else {
-    info('Fetching and hydrating followers every minute')
+    info('Fetching and hydrating followers every minute (~83 followers/sec)')
     info(`For your amount of followers, this will take approximately ${estimatedTime} minutes if you leave this executing in the background...`)
     await _loopLocal(_fetchAndHydrateLoop, userObj, 60)
     info(`Hydration process completed for ${followersCount} followers!`)
@@ -77,7 +77,8 @@ async function sendDMs (followerIds, message, coldRun = true) {
       }
     }
 
-    await recordDMCampaign(dmed, prunedMsg)
+    if (!coldRun) await recordDMCampaign(dmed, prunedMsg)
+
     info('DM campaign completed')
     return { remaining: dmLimit - dmed.length, periodEnds }
   } else {

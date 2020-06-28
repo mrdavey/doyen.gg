@@ -62,7 +62,7 @@ const { FILTERS } = require('../model/enums')
 router.get('/filter', async (req, res) => {
   const userObj = await dataController.getUserData()
   if (userObj) {
-    const filtered = await dataController.filterFollowers({ filter: FILTERS.MOST_ACTIVE_BY_F_RATIO, ratio: 1.2 })
+    const filtered = await dataController.filterFollowers({ filter: FILTERS.MOST_ACTIVE_BY_F_RATIO, ratio: 1.2, minTimestamp: 1593374274659 })
     res.json(filtered)
   } else {
     res.json({ error: 'User not authenticated. Go to "/"' })

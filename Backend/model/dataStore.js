@@ -116,7 +116,7 @@ async function getTopRatioAndActiveFollowers (ratio, minTimestamp, onlyVerified 
 const ratioOperation = (f, ratio, minTimestamp) => {
   const aboveRatio = f.followers / f.following > ratio
   if (minTimestamp) {
-    return aboveRatio && (!f.lastCampaignId || minTimestamp >= f.lastCampaignId)
+    return aboveRatio && (!f.lastCampaignId || minTimestamp > f.lastCampaignId)
   }
   return aboveRatio
 }
