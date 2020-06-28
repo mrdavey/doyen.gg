@@ -272,7 +272,7 @@ function processUserObject (user) {
     listed: user.listed_count,
     favourites: user.favourites_count,
     statuses: user.statuses_count,
-    created: user.created_at,
+    created: Date.parse(user.created_at),
     profileImage: user.profile_image_url_https.replace('normal', '400x400'),
     defaultProfile: user.default_profile,
     defaultImage: user.default_profile_image,

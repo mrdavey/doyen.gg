@@ -203,6 +203,27 @@ class LowDB {
     await this._add(TYPES.FOLLOWERS, 'followers', updatedDict)
     await this._setLastDMPeriod(campaign.start, ids.length || 0)
   }
+
+  async performOperation (operation, sortOperation, verified) {
+    const db = await this._getDB(TYPES.FOLLOWERS)
+    const defaultFilter = {
+      hydrated: true,
+      defaultProfile: false,
+      defaultImage: false
+    }
+
+    if (verified !== null) defaultFilter.verified = verified
+
+    const followers = db
+      .get('followers')
+      .filter(defaultFilter)
+      .filter(operation)
+      .sortBy(sortOperation)
+      .take(1000)
+      .value()
+
+    return followers
+  }
 }
 
 module.exports = LowDB

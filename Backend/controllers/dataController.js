@@ -8,9 +8,14 @@ const {
   getUnhydratedFollowers,
   hydrateFollowerIds,
   getDMsLeftToSend,
-  setLatestDMCampaign
+  setLatestDMCampaign,
+  getTopFollowersByRatio,
+  getMostActiveFollowers,
+  getTopRatioAndActiveFollowers
 } = require('../model/dataStore')
+const { FILTERS } = require('../model/enums')
 const { getFollowers, hydrate } = require('./twitter')
+const { error } = require('./log')
 
 /**
  * 
@@ -103,8 +108,22 @@ async function recordDMCampaign (ids, message) {
     message,
     ids
   }
-
   await setLatestDMCampaign(campaign, ids)
+}
+
+async function filterFollowers (filter, onlyVerified, ratio) {
+  switch (filter) {
+    case FILTERS.FOLLOWERS_RATIO:
+      if (!ratio) error('No ratio included')
+      return await getTopFollowersByRatio(ratio, onlyVerified)
+    case FILTERS.MOST_ACTIVE:
+      return await getMostActiveFollowers(onlyVerified)
+    case FILTERS.MOST_ACTIVE_BY_F_RATIO:
+      if (!ratio) error('No ratio included')
+      return await getTopRatioAndActiveFollowers(ratio, onlyVerified)
+    default:
+      error('Invalid filter used')
+  }
 }
 
 module.exports = {
@@ -114,5 +133,6 @@ module.exports = {
   getFollowersToHydrate,
   hydrateFollowers,
   getDMsRemaining,
-  recordDMCampaign
+  recordDMCampaign,
+  filterFollowers
 }

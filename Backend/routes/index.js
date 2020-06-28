@@ -57,24 +57,20 @@ router.get('/fh', async (req, res) => {
   }
 })
 
-const dataStore = require('../model/dataStore')
-router.get('/test', async (req, res) => {
-  const count = await dataStore.getFollowerCount()
-  res.json(count)
+const { FILTERS } = require('../model/enums')
+
+router.get('/filter', async (req, res) => {
+  const userObj = await dataController.getUserData()
+  if (userObj) {
+    const filtered = await dataController.filterFollowers(FILTERS.MOST_ACTIVE_BY_F_RATIO, null, 0.5)
+    res.json(filtered)
+  } else {
+    res.json({ error: 'User not authenticated. Go to "/"' })
+  }
 })
-// router.get('/hydrate', async (req, res) => {
-//   const userObj = await dataController.getUserData()
-//   if (userObj) {
-//     const followers = await dataController.getDownloadedFollowers()
-//     if (followers) {
-//       const count = await dataController.hydrateFollowers(followers, userObj)
-//       res.json({ count })
-//     } else {
-//       res.json({ error: 'No followers downloaded yet' })
-//     }
-//   } else {
-//     res.json({ error: 'User not authenticated. Go to "/"' })
-//   }
+
+// router.get('/test', async (req, res) => {
+//   res.json(result)
 // })
 
 router.get('/dm', async (req, res) => {
