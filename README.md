@@ -1,6 +1,3 @@
 # doyen.gg
- 
-## Config
-Node v12.18.1: https://nodejs.org/en/ (LTS)
-npm 6.14.5
 
+You're in the top level directory. Go to the [README.MD in the backend directory](/Backend/README.MD).

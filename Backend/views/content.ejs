@@ -1,0 +1,34 @@
+<div class="login-form">
+  <p>Logged in as: <%=username%> (<%=screenName%>)</p>
+  <br />
+  <% if (followersLoaded > 0) { %>
+
+  <p>Followers loaded: <%=followersLoaded%></p>
+  <br />
+  <a href='/filter'>Get top followers</a>
+  <br />
+  <form action="/dm" method="post">
+    <div class="form-control">
+      <label for="ids">IDs</label>
+      <input type="text" name="ids" id="ids" placeholder="Enter comma separated ids" value='<%=ids%>'/>
+    </div>
+    <div class="form-control">
+      <label for="message">Direct Message</label>
+      <input type="text" name="message" id="message" placeholder="Enter your message" />
+    </div>
+    <label for="coldrun">Cold run</label>
+    <input type="checkbox" id="coldrun" name="coldrun" value="true" checked>
+
+    <div class="form-control">
+      <button type="submit" class="btn">Send DM</button>
+    </div>
+  </form>
+
+  <% } else { %>
+
+  <form action = '/fh' method='GET'>
+    <button type='submit' class='btn'>Load followers</button>
+  </form>
+
+  <% } %>
+</div>

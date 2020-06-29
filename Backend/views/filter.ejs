@@ -1,0 +1,33 @@
+<%- include('header.ejs') %>
+<script src="/js/checkboxes.js"></script>
+<p>The following is a sorted list of your top followers, using their activity on Twitter and certain ratios</p>
+<p>We found <%=followers.length%> followers that you could DM.</p>
+<br />
+<form action="/app" method="post">
+  <input type="text" name="ids" id="ids" hidden />
+  <button onclick="serialize()" class="btn">Add checked to DM recipients</button>
+  <button onclick="serialize(10)" class="btn">Add top 10 checked</button>
+  <button onclick="serialize(100)" class="btn">Add top 100 checked</button>
+</form>
+<br />
+<table>
+  <thead>
+    <tr>
+      <th>Follower</th>
+      <th>Add to DM list</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% followers.forEach(follower => { %>
+      <tr>
+        <td>
+          <%=follower.name%> <a href='https://twitter.com/<%=follower.screenName%>' target='_blank'>(<%=follower.screenName%>)</a>
+        </td>
+        <td>
+          <input type="checkbox" id='<%=follower.id%>' name="id" value='<%=follower.id%>' checked>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+<%- include('footer.ejs') %>

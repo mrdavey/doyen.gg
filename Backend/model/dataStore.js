@@ -60,7 +60,7 @@ async function getDMsLeftToSend () {
       return { remaining: dmLimitPerDay - lastDMPeriod.dmCount, periodEnds: end }
     }
   }
-  return { remaining: dmLimitPerDay, periodEnds: convertTimestampToSeconds(Date.now()) }
+  return { remaining: dmLimitPerDay, periodEnds: convertTimestampToSeconds(Date.now()) + 86400 }
 }
 
 async function setLatestDMCampaign (campaign, ids) {

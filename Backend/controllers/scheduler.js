@@ -10,7 +10,7 @@
 
 const { downloadFollowerIds, getFollowersToHydrate, getUserData, hydrateFollowers, getDMsRemaining, recordDMCampaign } = require('./dataController')
 const { sendDirectMessage } = require('../controllers/twitter')
-const { convertTimestampToSeconds } = require('../helpers')
+const { convertTimestampToSeconds, getTimeLeftFromNow } = require('../helpers')
 const { info, log, error } = require('./log')
 
 async function fetchFollowersAndHydrate () {
@@ -48,8 +48,7 @@ async function sendDMs (followerIds, message, coldRun = true) {
   let dmLimit = 1000
 
   const { remaining, periodEnds } = await getDMsRemaining()
-  const secondsLeft = periodEnds - convertTimestampToSeconds(Date.now())
-  const timeLeftHours = (secondsLeft / 3600).toFixed(2)
+  const timeLeftHours = getTimeLeftFromNow(periodEnds)
 
   if (remaining > 0) {
     if (remaining < dmLimit) {

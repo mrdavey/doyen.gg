@@ -1,35 +1,40 @@
 const express = require('express')
-const cors = require('cors')
-const { error } = require('../controllers/log')
-
 const router = express.Router()
 
-const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' ? process.env.FRONTEND_URL : 'http://localhost:3000',
-  optionsSuccessStatus: 200
-}
-
-// router.options("/analyse/", cors(corsOptions))
-// router.post("/analyse/", cors(corsOptions), sentimentController.analyseTextArray)
-
 const twitter = require('../controllers/twitter')
+const dataController = require('../controllers/dataController')
+const scheduler = require('../controllers/scheduler')
+const { getTimeLeftFromNow } = require('../helpers')
+
 router.get('/', async (req, res) => {
+  const twitterKey = process.env.TWITTER_KEY
+  const twitterSecret = process.env.TWITTER_SECRET
+  const twitterCallback = process.env.TWITTER_OAUTH_CALLBACK_URL
+
+  if (!twitterKey || !twitterSecret || !twitterCallback) {
+    return res.render('failure', {
+      error: "You haven't set up your .env file properly yet. Make sure you follow the README.MD instructions carefully."
+    })
+  }
+
   const userObj = await dataController.getUserData()
   if (userObj) {
     res.redirect('/app')
   } else {
-    try {
-      const redirectUrl = await twitter.getRequestTokenAndGetRedirectUrl()
-      res.redirect(redirectUrl)
-    } catch (e) {
-      res.sendStatus(500, error(`A redirect error occured: ${e.message}`, false))
-    }
+    res.render('login')
   }
 })
 
-const dataController = require('../controllers/dataController')
-// Needs to be same subdomain as TWITTER_OAUTH_CALLBACK_URL
+router.get('/login', async (req, res) => {
+  try {
+    const redirectUrl = await twitter.getRequestTokenAndGetRedirectUrl()
+    res.redirect(redirectUrl)
+  } catch (e) {
+    res.render('failure', { error: `A redirect error occured: ${e.message}` })
+  }
+})
 
+// Needs to be same subdomain as TWITTER_OAUTH_CALLBACK_URL
 router.get('/twitterOAuth', async (req, res) => {
   const accessTokens = await twitter.redirectCallback(req.query)
   const user = await twitter.verifyCredentials(accessTokens.oauth_token, accessTokens.oauth_token_secret)
@@ -39,21 +44,47 @@ router.get('/twitterOAuth', async (req, res) => {
 
 router.get('/app', async (req, res) => {
   const userObj = await dataController.getUserData()
+  const followersLoaded = await dataController.getFollowersLoaded() || 0
   if (userObj) {
-    res.json(`Hi ${userObj.user.name} (${userObj.user.screenName})`)
+    res.render('index', {
+      username: userObj.user.name,
+      screenName: userObj.user.screenName,
+      followersLoaded,
+      ids: []
+    })
   } else {
-    res.json({ error: 'User not authenticated. Go to "/"' })
+    res.redirect('/login')
   }
 })
 
-const scheduler = require('../controllers/scheduler')
+router.post('/app', async (req, res) => {
+  const userObj = await dataController.getUserData()
+  const followersLoaded = await dataController.getFollowersLoaded() || 0
+  if (userObj) {
+    const { ids } = req.body
+
+    res.render('index', {
+      username: userObj.user.name,
+      screenName: userObj.user.screenName,
+      followersLoaded,
+      ids
+    })
+  } else {
+    res.redirect('/login')
+  }
+})
+
 router.get('/fh', async (req, res) => {
   const userObj = await dataController.getUserData()
   if (userObj) {
     scheduler.fetchFollowersAndHydrate()
-    res.json('Running fetch and hydrate...')
+    return res.render('success', {
+      message: 'Running fetch and hydrate in the background. Check your open terminal.'
+    })
   } else {
-    res.json({ error: 'User not authenticated. Go to "/"' })
+    res.render('failure', {
+      error: 'You are not logged in yet.'
+    })
   }
 })
 
@@ -62,28 +93,41 @@ const { FILTERS } = require('../model/enums')
 router.get('/filter', async (req, res) => {
   const userObj = await dataController.getUserData()
   if (userObj) {
-    const filtered = await dataController.filterFollowers({ filter: FILTERS.MOST_ACTIVE_BY_F_RATIO, ratio: 1.2, minTimestamp: 1593374274659 })
-    res.json(filtered)
+    const filtered = await dataController.filterFollowers({ filter: FILTERS.MOST_ACTIVE_BY_F_RATIO, ratio: 0.8 })
+    return res.render('filter', {
+      followers: filtered
+    })
   } else {
-    res.json({ error: 'User not authenticated. Go to "/"' })
+    res.render('failure', {
+      error: 'You are not logged in yet.'
+    })
   }
 })
 
-router.get('/test', async (req, res) => {
-  const userObj = await dataController.getUserData()
-  const result = await twitter.hydrate({ userIds: ['15982471'], token: userObj.auth.token, tokenSecret: userObj.auth.tokenSecret })
-  res.json(result)
-})
-
-router.get('/dm', async (req, res) => {
+router.post('/dm', async (req, res) => {
   const userObj = await dataController.getUserData()
   if (userObj) {
-    const userIds = ['15982471', '1081']
-    const message = 'Hi again. Test message from Doyen.gg'
-    const result = await scheduler.sendDMs(userIds, message)
-    res.json(result)
+    const { ids, message, coldrun } = req.body
+    const userIds = ids.replace(' ', '').split(',')
+    const isColdRun = coldrun === undefined ? false : coldrun
+
+    if (userIds.length > 0 && message) {
+      const result = await scheduler.sendDMs(userIds, message, isColdRun)
+      const success = `DMs ${isColdRun ? 'would have been ' : ''}sent to ${userIds.length} IDs. You ${isColdRun ? 'would ' : ''}have ${
+        result.remaining
+      } DMs left to send for the next ${getTimeLeftFromNow(result.periodEnds)} hours${isColdRun ? ' if this wasn\'t a cold run' : ''}.`
+      res.render('success', {
+        message: success
+      })
+    } else {
+      res.render('failure', {
+        error: 'Missing field'
+      })
+    }
   } else {
-    res.json({ error: 'User not authenticated. Go to "/"' })
+    res.render('failure', {
+      error: 'You are not logged in yet.'
+    })
   }
 })
 

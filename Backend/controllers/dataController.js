@@ -11,7 +11,7 @@ const {
   setLatestDMCampaign,
   getTopFollowersByRatio,
   getMostActiveFollowers,
-  getTopRatioAndActiveFollowers
+  getTopRatioAndActiveFollowers,
 } = require('../model/dataStore')
 const { FILTERS } = require('../model/enums')
 const { getFollowers, hydrate } = require('./twitter')
@@ -40,6 +40,10 @@ async function getUserData () {
     return userEntity
   }
   return null
+}
+
+async function getFollowersLoaded () {
+  return await getFollowerCount()
 }
 
 /**
@@ -134,6 +138,7 @@ async function filterFollowers ({ filter, onlyVerified, ratio, minTimestamp }) {
 module.exports = {
   saveUserData,
   getUserData,
+  getFollowersLoaded,
   downloadFollowerIds,
   getFollowersToHydrate,
   hydrateFollowers,
