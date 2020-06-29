@@ -3,6 +3,8 @@
 Easily download your twitter follower's details and direct message the most high value active followers.
 DM rate limits are managed so you won't go over the limits.
 
+A hack project for [Balaji's bounty](https://github.com/balajis/twitter-export/issues/1#issuecomment-650849983).
+
 MVP screenshots [here](../assets/MVP).
 
 ## Prerequisites
@@ -57,3 +59,4 @@ MVP screenshots [here](../assets/MVP).
  - If you have less than 75k followers, then it will take approx. 15min without any changes to `LOCAL_FOLLOWER_LIMIT`.
  - Sending of DMs is set to 'cold run' by default, which means they won't actually get sent. Only if you untick the 'cold run' option, then they will actually be sent to the selected IDs.
  - There are more filtering and sorting options within the code. If you know what you are doing then you can easily change them in the `routes/index.js` file under the `/filter` route.
+ - If you want to test with a few Twitter users that you know, input their Twitter IDs into the IDs field on the main page. To easily get the ID from a screen name, use a [tool such as this](http://gettwitterid.com/).
