@@ -3,6 +3,8 @@
 Easily download your twitter follower's details and direct message the most high value active followers.
 DM rate limits are managed so you won't go over the limits.
 
+MVP screenshots [here](../assets/MVP).
+
 ## Prerequisites
  - [Node v12.18.1 (LTS)](https://nodejs.org/en/)
  - npm 6.14.5 (comes with Node.js)
