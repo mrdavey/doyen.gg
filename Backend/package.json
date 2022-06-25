@@ -16,7 +16,7 @@
     "express": "^4.17.1",
     "lowdb": "^1.0.0",
     "moment": "^2.27.0",
-    "node-fetch": "^2.6.0"
+    "node-fetch": "^2.6.7"
   },
   "devDependencies": {
     "eslint": "^7.3.0",
